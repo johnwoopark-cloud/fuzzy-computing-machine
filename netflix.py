@@ -1,14 +1,13 @@
 """
 netflix.py
 ──────────────────────────────────────────────────────
-매일 08:50 GitHub Actions에서 실행됩니다.
-Netflix 한국 Top 20 순위를 FlixPatrol에서 스크래핑하여
-history/{YYYY-MM-DD}.json 과 history/index.json 에 저장합니다.
+Netflix 공식 Tudum 페이지에서 한국 Top 10 TV + Top 10 영화를
+Playwright(헤드리스 브라우저)로 파싱하여 합산 Top 20 생성.
 
 저장 위치:
   history/
-    index.json          ← 날짜 목록 ["2025-04-10", ...]
-    2025-04-10.json     ← 해당 날짜 Top 20 데이터
+    index.json          ← 주차 목록 ["2026-W14", ...]
+    2026-W14.json       ← 해당 주 Top 20 데이터
 """
 
 import json
@@ -17,218 +16,169 @@ import re
 import sys
 from datetime import date, datetime, timezone
 
-import requests
-from bs4 import BeautifulSoup
-
 # ── 설정 ──────────────────────────────────────────────
 HISTORY_DIR = "history"
-TODAY = date.today().isoformat()           # "2025-04-10"
-OUTPUT_FILE = os.path.join(HISTORY_DIR, f"{TODAY}.json")
+
+today      = date.today()
+year, week, _ = today.isocalendar()
+WEEK_KEY   = f"{year}-W{week:02d}"          # ex) "2026-W15"
+OUTPUT_FILE = os.path.join(HISTORY_DIR, f"{WEEK_KEY}.json")
 INDEX_FILE  = os.path.join(HISTORY_DIR, "index.json")
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
-}
+TV_URL    = "https://www.netflix.com/tudum/top10/south-korea/tv"
+MOVIE_URL = "https://www.netflix.com/tudum/top10/south-korea"
 
-# ── 스크래핑 함수들 ────────────────────────────────────
+# ── Playwright 스크래핑 ────────────────────────────────
 
-def fetch_flixpatrol() -> list[dict]:
+def scrape_tudum(url: str, content_type: str) -> list[dict]:
     """
-    FlixPatrol에서 Netflix 한국 Top 10 TV / Top 10 Movies 가져오기.
-    URL: https://flixpatrol.com/top10/netflix/south-korea/
+    Playwright로 Netflix Tudum 페이지 렌더링 후 순위 파싱.
+    반환: [{"rank": 1, "title": "...", "type": "TV"|"Movie", "week_range": "..."}, ...]
     """
-    url = "https://flixpatrol.com/top10/netflix/south-korea/"
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
     results = []
-    rank_global = 1
 
-    # FlixPatrol 구조: table 내 tr 행으로 순위 데이터 제공
-    # TOP 10 TV Shows 와 TOP 10 Movies 두 섹션 존재
-    for section in soup.select("div.table-group"):
-        header = section.select_one("h2, h3")
-        section_type = "TV"
-        if header:
-            txt = header.get_text(strip=True).lower()
-            if "movie" in txt or "film" in txt:
-                section_type = "Movie"
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        ctx = browser.new_context(
+            locale="ko-KR",
+            user_agent=(
+                "Mozilla/5.0 (X11; Linux x86_64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+        )
+        page = ctx.new_page()
 
-        rows = section.select("tr")
-        local_rank = 0
-        for row in rows:
-            rank_td = row.select_one("td.rank, td:first-child")
-            title_td = row.select_one("td.title, td:nth-child(2) a, a.title")
-            if not rank_td or not title_td:
-                continue
+        print(f"  접속 중: {url}")
+        page.goto(url, wait_until="networkidle", timeout=60000)
 
-            raw_rank = rank_td.get_text(strip=True).replace("#", "")
-            if not raw_rank.isdigit():
-                continue
+        # 순위 컨테이너가 로드될 때까지 대기
+        # Tudum 페이지: ol 또는 [data-testid] 속성이 있는 리스트
+        try:
+            page.wait_for_selector("table, ol, [class*='RankList'], [class*='rank']", timeout=20000)
+        except PWTimeout:
+            print("  ⚠ 셀렉터 타임아웃 — 현재 DOM으로 파싱 시도")
 
-            local_rank += 1
-            title = title_td.get_text(strip=True)
-            if not title:
-                continue
+        html = page.content()
+        browser.close()
 
+    # ── HTML 파싱 ──────────────────────────────────────
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "lxml")
+
+    # 날짜 범위 추출 (예: "3/23/26 - 3/29/26")
+    week_range = ""
+    for el in soup.find_all(string=re.compile(r"\d+/\d+/\d+\s*-\s*\d+/\d+/\d+")):
+        m = re.search(r"(\d+/\d+/\d+)\s*-\s*(\d+/\d+/\d+)", el)
+        if m:
+            week_range = f"{m.group(1)} - {m.group(2)}"
+            break
+
+    # 순위 항목 파싱 전략 1: <table> 기반
+    rows = soup.select("table tbody tr, table tr")
+    rank = 1
+    for row in rows:
+        cells = row.find_all(["td", "th"])
+        if len(cells) < 2:
+            continue
+        # 첫 셀이 숫자(순위)이거나 제목 셀 탐색
+        title = ""
+        for cell in cells:
+            text = cell.get_text(strip=True)
+            if text and not text.isdigit() and len(text) > 1:
+                title = text
+                break
+        if title:
             results.append({
-                "rank":  rank_global,
-                "local_rank": int(raw_rank),
-                "title": title,
-                "type":  section_type,
-                "weeks": None,
+                "rank":       rank,
+                "title":      title,
+                "type":       content_type,
+                "week_range": week_range,
             })
-            rank_global += 1
-            if rank_global > 20:
+            rank += 1
+            if rank > 10:
                 break
 
-        if rank_global > 20:
-            break
+    # 전략 2: 순위 번호 + 제목 패턴 탐색 (table 실패 시)
+    if not results:
+        # 숫자로 시작하는 span/div + 인접 제목
+        rank_els = soup.find_all(
+            lambda t: t.name in ("span", "div", "p", "td") and
+                      t.get_text(strip=True).isdigit() and
+                      1 <= int(t.get_text(strip=True)) <= 10
+        )
+        seen_ranks = set()
+        for el in rank_els:
+            r = int(el.get_text(strip=True))
+            if r in seen_ranks:
+                continue
+            seen_ranks.add(r)
+            # 인접 형제 또는 부모에서 제목 탐색
+            parent = el.parent
+            title  = ""
+            for sib in parent.find_all(["span", "div", "a", "h3", "p"]):
+                t = sib.get_text(strip=True)
+                if t and not t.isdigit() and t != el.get_text(strip=True) and len(t) > 2:
+                    title = t
+                    break
+            if title:
+                results.append({
+                    "rank":       r,
+                    "title":      title,
+                    "type":       content_type,
+                    "week_range": week_range,
+                })
+        results.sort(key=lambda x: x["rank"])
 
+    # 전략 3: <li> 기반 리스트
+    if not results:
+        items = soup.select("ol li, ul li")
+        rank  = 1
+        for li in items:
+            text = li.get_text(separator=" ", strip=True)
+            # 숫자로 시작하면 제거
+            text = re.sub(r"^\d+\s*", "", text).strip()
+            if text and len(text) > 2:
+                results.append({
+                    "rank":       rank,
+                    "title":      text[:80],
+                    "type":       content_type,
+                    "week_range": week_range,
+                })
+                rank += 1
+                if rank > 10:
+                    break
+
+    print(f"  → {content_type} {len(results)}개 파싱 완료 (주간: {week_range or 'N/A'})")
     return results
 
-
-def fetch_flixpatrol_v2() -> list[dict]:
-    """
-    FlixPatrol 대안 파싱 — 구조 변경 대비 fallback.
-    div.top10-table 또는 ul.top10-list 형태 대응.
-    """
-    url = "https://flixpatrol.com/top10/netflix/south-korea/"
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
-
-    results = []
-    rank = 1
-
-    # 일반 리스트 형식 탐색
-    for item in soup.select("[class*='top10'] a[href*='/title/']"):
-        title = item.get_text(strip=True)
-        if not title or title.lower() in ("", "see more"):
-            continue
-        # 타입 추정: URL에 movie 포함 여부
-        href = item.get("href", "")
-        content_type = "Movie" if "movie" in href else "TV"
-        results.append({
-            "rank":  rank,
-            "local_rank": rank,
-            "title": title,
-            "type":  content_type,
-            "weeks": None,
-        })
-        rank += 1
-        if rank > 20:
-            break
-
-    return results
-
-
-def fetch_with_serpapi() -> list[dict]:
-    """
-    SerpAPI Google 검색 결과로 Netflix 한국 순위 가져오기.
-    환경변수 SERPAPI_KEY 가 있을 때 사용.
-    """
-    api_key = os.environ.get("SERPAPI_KEY", "")
-    if not api_key:
-        return []
-
-    params = {
-        "engine":   "google",
-        "q":        "Netflix 한국 Top 20 순위 오늘",
-        "hl":       "ko",
-        "gl":       "kr",
-        "api_key":  api_key,
-    }
-    resp = requests.get("https://serpapi.com/search", params=params, timeout=20)
-    resp.raise_for_status()
-    data = resp.json()
-
-    results = []
-    rank = 1
-    for item in data.get("organic_results", [])[:20]:
-        title = item.get("title", "")
-        if not title:
-            continue
-        results.append({
-            "rank":  rank,
-            "local_rank": rank,
-            "title": title,
-            "type":  "Unknown",
-            "weeks": None,
-        })
-        rank += 1
-    return results
-
-
-def generate_sample_data() -> list[dict]:
-    """
-    실제 스크래핑 실패 시 사용하는 임시 샘플 데이터.
-    GitHub Actions 첫 테스트 확인용.
-    """
-    titles = [
-        ("오징어 게임 시즌2", "TV"), ("더 글로리", "TV"),
-        ("기생충", "Movie"), ("이상한 변호사 우영우", "TV"),
-        ("스위트홈 시즌3", "TV"), ("킹덤", "TV"),
-        ("지옥 시즌2", "TV"), ("소년심판", "TV"),
-        ("무브 투 헤븐", "TV"), ("마스크걸", "TV"),
-        ("사랑의 불시착", "TV"), ("이태원 클라쓰", "TV"),
-        ("빈센조", "TV"), ("펜트하우스", "TV"),
-        ("갯마을 차차차", "TV"), ("지금 우리 학교는", "TV"),
-        ("수리남", "TV"), ("종이의 집 코리아", "TV"),
-        ("경이로운 소문", "TV"), ("나의 아저씨", "TV"),
-    ]
-    import random
-    random.shuffle(titles)
-    return [
-        {"rank": i+1, "local_rank": i+1, "title": t, "type": tp, "weeks": random.randint(1,8)}
-        for i, (t, tp) in enumerate(titles)
-    ]
-
-
-# ── 메인 ──────────────────────────────────────────────
 
 def collect_ranking() -> list[dict]:
-    """순위 수집: 여러 소스를 순서대로 시도."""
-    strategies = [
-        ("FlixPatrol v1",  fetch_flixpatrol),
-        ("FlixPatrol v2",  fetch_flixpatrol_v2),
-        ("SerpAPI",        fetch_with_serpapi),
-    ]
-    for name, fn in strategies:
-        try:
-            print(f"[{datetime.now(timezone.utc).isoformat()}] 시도: {name}")
-            data = fn()
-            if data:
-                print(f"  ✓ 성공 ({len(data)}개 항목)")
-                return data
-            print(f"  ✗ 빈 결과")
-        except Exception as e:
-            print(f"  ✗ 오류: {e}")
+    """TV Top10 + Movie Top10 → 합산 Top20"""
+    print("[1/2] TV 순위 수집")
+    tv     = scrape_tudum(TV_URL,    "TV")
 
-    print("  ⚠ 모든 소스 실패 → 샘플 데이터 사용")
-    return generate_sample_data()
+    print("[2/2] 영화 순위 수집")
+    movies = scrape_tudum(MOVIE_URL, "Movie")
+
+    # TV는 1~10위, 영화는 11~20위로 통합 순위 생성
+    combined = []
+    for i, item in enumerate(tv[:10], start=1):
+        combined.append({**item, "rank": i, "section_rank": item["rank"]})
+    for i, item in enumerate(movies[:10], start=11):
+        combined.append({**item, "rank": i, "section_rank": item["rank"]})
+
+    return combined
 
 
 def save_data(ranking: list[dict]) -> None:
-    """history/ 폴더에 날짜별 JSON과 index.json 저장."""
     os.makedirs(HISTORY_DIR, exist_ok=True)
 
-    # 날짜별 파일 저장
-    payload = {
-        "date":      TODAY,
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
-        "source":    "FlixPatrol / auto-scrape",
-        "items":     ranking,
-    }
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(ranking, f, ensure_ascii=False, indent=2)
-    print(f"  저장 완료: {OUTPUT_FILE}")
+    print(f"  저장: {OUTPUT_FILE}")
 
     # index.json 업데이트
     if os.path.exists(INDEX_FILE):
@@ -237,30 +187,35 @@ def save_data(ranking: list[dict]) -> None:
     else:
         index = []
 
-    if TODAY not in index:
-        index.append(TODAY)
+    if WEEK_KEY not in index:
+        index.append(WEEK_KEY)
         index.sort()
 
     with open(INDEX_FILE, "w", encoding="utf-8") as f:
         json.dump(index, f, ensure_ascii=False, indent=2)
-    print(f"  인덱스 업데이트: {INDEX_FILE} ({len(index)}개 날짜)")
+    print(f"  인덱스 업데이트: {INDEX_FILE} ({len(index)}개 주차)")
 
 
 def print_ranking(ranking: list[dict]) -> None:
-    """콘솔 출력."""
-    print(f"\n{'='*50}")
-    print(f"  Netflix 한국 Top 20  ({TODAY})")
-    print(f"{'='*50}")
+    week_range = ranking[0].get("week_range", "") if ranking else ""
+    print(f"\n{'='*55}")
+    print(f"  Netflix 한국 Top 20  ({WEEK_KEY}  {week_range})")
+    print(f"{'='*55}")
     for item in ranking:
-        bar = "★" if item["rank"] <= 3 else " "
-        weeks = f"  ({item['weeks']}주)" if item.get("weeks") else ""
-        print(f"  {bar} {item['rank']:2d}위  {item['title']:<30} [{item['type']}]{weeks}")
-    print(f"{'='*50}\n")
+        star = "★" if item["rank"] <= 3 else " "
+        sec  = f"[{item['type']} #{item.get('section_rank', item['rank'])}]"
+        print(f"  {star} {item['rank']:2d}위  {item['title']:<35} {sec}")
+    print(f"{'='*55}\n")
 
 
 if __name__ == "__main__":
-    print(f"\n[Netflix Korea Tracker] {TODAY} 실행 시작")
+    print(f"\n[Netflix Korea Tracker] {WEEK_KEY} 실행 시작")
     ranking = collect_ranking()
+
+    if not ranking:
+        print("⚠ 데이터 없음 — 종료")
+        sys.exit(1)
+
     print_ranking(ranking)
     save_data(ranking)
     print("완료.\n")
