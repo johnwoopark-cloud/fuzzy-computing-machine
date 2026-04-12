@@ -6,332 +6,153 @@
   <title>Netflix Korea Top 20</title>
   <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     :root {
-      --red: #E50914;
-      --red-dim: #8B0000;
-      --gold: #F5C518;
-      --bg: #0A0A0A;
-      --surface: #111111;
-      --card: #1A1A1A;
-      --border: #2A2A2A;
-      --text: #F0F0F0;
-      --muted: #888;
-      --up: #4CAF50;
-      --down: #F44336;
-      --same: #888;
+      --red: #E50914; --red-dim: #8B0000; --gold: #F5C518;
+      --bg: #0A0A0A; --surface: #111; --card: #1A1A1A;
+      --border: #2A2A2A; --text: #F0F0F0; --muted: #888;
+      --up: #4CAF50; --down: #F44336; --same: #666;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; overflow-x: hidden; }
 
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── HEADER ── */
+    /* HEADER */
     header {
-      position: relative;
-      padding: 48px 40px 32px;
+      position: relative; padding: 48px 40px 32px;
       border-bottom: 1px solid var(--border);
       background: linear-gradient(180deg, #1a0000 0%, var(--bg) 100%);
-      overflow: hidden;
     }
     header::before {
-      content: '';
-      position: absolute;
-      top: -60px; left: -60px;
+      content: ''; position: absolute; top: -60px; left: -60px;
       width: 300px; height: 300px;
       background: radial-gradient(circle, rgba(229,9,20,0.18) 0%, transparent 70%);
       pointer-events: none;
     }
-    .logo {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      letter-spacing: -1px;
-      line-height: 1;
-    }
+    .logo { font-family: 'Black Han Sans', sans-serif; font-size: clamp(2rem,5vw,3.5rem); letter-spacing: -1px; }
     .logo span { color: var(--red); }
-    .subtitle {
-      margin-top: 6px;
-      font-size: 0.85rem;
-      color: var(--muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-    .last-updated {
-      position: absolute;
-      top: 48px; right: 40px;
-      font-size: 0.78rem;
-      color: var(--muted);
-      text-align: right;
-    }
+    .subtitle { margin-top: 6px; font-size: 0.85rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+    .last-updated { position: absolute; top: 48px; right: 40px; font-size: 0.78rem; color: var(--muted); text-align: right; }
     .last-updated strong { color: var(--text); display: block; font-size: 0.9rem; }
 
-    /* ── NAV TABS ── */
-    nav {
-      display: flex;
-      gap: 4px;
-      padding: 20px 40px 0;
-      border-bottom: 1px solid var(--border);
-    }
+    /* NAV */
+    nav { display: flex; gap: 4px; padding: 20px 40px 0; border-bottom: 1px solid var(--border); }
     nav button {
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      color: var(--muted);
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.9rem;
-      font-weight: 500;
-      padding: 10px 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-      letter-spacing: 0.5px;
+      background: none; border: none; border-bottom: 3px solid transparent;
+      color: var(--muted); font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.9rem; font-weight: 500; padding: 10px 20px; cursor: pointer; transition: all .2s;
     }
-    nav button.active {
-      color: var(--text);
-      border-bottom-color: var(--red);
-    }
+    nav button.active { color: var(--text); border-bottom-color: var(--red); }
     nav button:hover:not(.active) { color: var(--text); }
 
-    /* ── MAIN CONTENT ── */
+    /* MAIN */
     main { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
-
     .section { display: none; }
     .section.active { display: block; }
 
-    /* ── RANKING TABLE ── */
-    .date-badge {
-      display: inline-block;
-      background: var(--red);
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 12px;
-      border-radius: 2px;
-      letter-spacing: 1px;
-      margin-bottom: 20px;
+    /* WEEK BADGE */
+    .week-badge {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 16px; margin-bottom: 20px;
     }
+    .week-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+    .week-badge .label { font-size: 0.78rem; color: var(--muted); letter-spacing: 1px; }
+    .week-badge .range { font-size: 0.88rem; font-weight: 600; }
 
-    .ranking-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 12px;
+    /* SOURCE NOTE */
+    .source-note {
+      font-size: 0.72rem; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 4px; padding: 6px 12px; margin-bottom: 20px;
+      display: inline-block;
     }
+    .source-note a { color: var(--red); text-decoration: none; }
+    .source-note a:hover { text-decoration: underline; }
+
+    /* RANKING GRID */
+    .section-title {
+      font-size: 0.72rem; font-weight: 700; color: var(--muted);
+      letter-spacing: 2px; text-transform: uppercase;
+      margin: 20px 0 10px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-title span { color: var(--red); }
+
+    .ranking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
 
     .rank-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      transition: border-color 0.2s, transform 0.2s;
-      animation: fadeIn 0.4s ease both;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 14px 18px; display: flex; align-items: center; gap: 14px;
+      transition: border-color .2s, transform .2s;
+      animation: fadeIn .4s ease both;
     }
-    .rank-card:hover {
-      border-color: var(--red-dim);
-      transform: translateY(-2px);
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    .rank-card:hover { border-color: var(--red-dim); transform: translateY(-2px); }
+    .rank-card.movie-card { border-left: 3px solid #2196F3; }
+    .rank-card.tv-card    { border-left: 3px solid var(--red); }
 
-    .rank-num {
-      font-family: 'Black Han Sans', sans-serif;
-      font-size: 2.2rem;
-      min-width: 52px;
-      text-align: center;
-      line-height: 1;
-    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to { opacity:1; transform:translateY(0);} }
+
+    .rank-num { font-family: 'Black Han Sans', sans-serif; font-size: 2rem; min-width: 48px; text-align: center; line-height: 1; }
     .rank-num.top3 { color: var(--gold); }
 
     .rank-info { flex: 1; min-width: 0; }
-    .rank-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .rank-title { font-size: 0.93rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-meta  { font-size: 0.7rem; color: var(--muted); margin-top: 3px; letter-spacing: 1px; }
+    .type-badge {
+      font-size: 0.62rem; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+      margin-right: 4px; letter-spacing: 1px;
     }
-    .rank-type {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 3px;
-      letter-spacing: 1px;
-    }
+    .type-badge.tv    { background: rgba(229,9,20,0.2); color: #ff6b6b; }
+    .type-badge.movie { background: rgba(33,150,243,0.2); color: #64b5f6; }
 
-    .rank-change {
-      font-size: 0.78rem;
-      font-weight: 700;
-      min-width: 36px;
-      text-align: right;
-    }
+    .rank-change { font-size: 0.78rem; font-weight: 700; min-width: 36px; text-align: right; }
     .rank-change.up   { color: var(--up); }
     .rank-change.down { color: var(--down); }
     .rank-change.same { color: var(--same); }
     .rank-change.new  { color: var(--gold); }
 
-    /* ── CHART SECTION ── */
-    .chart-controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 28px;
+    /* CHART */
+    .chart-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 24px; }
+    .chart-controls label { font-size: 0.8rem; color: var(--muted); margin-right: 4px; }
+    select, .search-box {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif; font-size: 0.82rem;
+      padding: 7px 12px; border-radius: 4px; cursor: pointer; outline: none; transition: border-color .2s;
     }
-    .chart-controls label {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-right: 4px;
-    }
-    select, .filter-btn {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.82rem;
-      padding: 7px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    select:hover, .filter-btn:hover { border-color: var(--red); }
-
-    .search-box {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'Noto Sans KR', sans-serif;
-      font-size: 0.82rem;
-      padding: 7px 14px;
-      border-radius: 4px;
-      outline: none;
-      width: 220px;
-      transition: border-color 0.2s;
-    }
-    .search-box:focus { border-color: var(--red); }
+    select:hover, .search-box:focus { border-color: var(--red); }
+    .search-box { width: 220px; cursor: text; }
     .search-box::placeholder { color: var(--muted); }
 
     .chart-wrap {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 28px;
-      margin-bottom: 20px;
-      position: relative;
-      min-height: 420px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 28px; margin-bottom: 16px; min-height: 380px;
     }
-
-    .legend-custom {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 16px;
-    }
+    .legend-custom { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.78rem;
-      cursor: pointer;
-      padding: 4px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px; font-size: 0.75rem; cursor: pointer;
+      padding: 3px 10px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; transition: all .2s;
     }
     .legend-item:hover { border-color: var(--red-dim); }
-    .legend-item.hidden-series { opacity: 0.35; }
-    .legend-dot {
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
+    .legend-item.hidden-series { opacity: .35; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 
-    /* ── HEATMAP ── */
-    .heatmap-wrap {
-      overflow-x: auto;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-    }
-    table.heatmap {
-      border-collapse: separate;
-      border-spacing: 3px;
-      min-width: 600px;
-      width: 100%;
-    }
-    .heatmap th {
-      font-size: 0.72rem;
-      font-weight: 500;
-      color: var(--muted);
-      padding: 4px 6px;
-      text-align: center;
-      white-space: nowrap;
-    }
-    .heatmap th.title-col { text-align: left; min-width: 160px; }
-    .heatmap td {
-      font-size: 0.78rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 6px;
-      border-radius: 4px;
-      min-width: 38px;
-    }
-    .heatmap td.title-cell {
-      text-align: left;
-      font-weight: 400;
-      color: var(--text);
-      padding-right: 12px;
-      font-size: 0.8rem;
-      white-space: nowrap;
-      overflow: hidden;
-      max-width: 180px;
-      text-overflow: ellipsis;
-    }
+    /* HEATMAP */
+    .heatmap-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    table.heatmap { border-collapse: separate; border-spacing: 3px; min-width: 500px; width: 100%; }
+    .heatmap th { font-size: 0.68rem; font-weight: 500; color: var(--muted); padding: 4px 6px; text-align: center; white-space: nowrap; }
+    .heatmap th.title-col { text-align: left; min-width: 150px; }
+    .heatmap td { font-size: 0.75rem; font-weight: 700; text-align: center; padding: 6px; border-radius: 4px; min-width: 48px; }
+    .heatmap td.title-cell { text-align: left; font-weight: 400; color: var(--text); padding-right: 12px; font-size: 0.78rem; white-space: nowrap; overflow: hidden; max-width: 170px; text-overflow: ellipsis; }
 
-    /* ── LOADING / ERROR ── */
-    .state-box {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 80px 20px;
-      gap: 16px;
-      color: var(--muted);
-    }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--red);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
+    /* LOADING */
+    .state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; gap: 16px; color: var(--muted); }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .empty-msg {
-      background: var(--card);
-      border: 1px dashed var(--border);
-      border-radius: 8px;
-      padding: 48px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
-
-    /* ── RESPONSIVE ── */
+    /* RESPONSIVE */
     @media (max-width: 640px) {
-      header { padding: 28px 20px; }
-      main { padding: 20px; }
+      header { padding: 28px 20px; } main { padding: 20px; }
       nav { padding: 16px 20px 0; overflow-x: auto; }
       .ranking-grid { grid-template-columns: 1fr; }
       .last-updated { position: static; margin-top: 12px; }
@@ -342,25 +163,33 @@
 
 <header>
   <div class="logo"><span>NETFLIX</span> 한국 인기 순위</div>
-  <div class="subtitle">Korea Top 20 · Daily Tracker</div>
-  <div class="last-updated" id="lastUpdated">
-    <strong id="updateDate">–</strong>
-    마지막 업데이트
+  <div class="subtitle">Korea Top 20 · Official Tudum Weekly</div>
+  <div class="last-updated">
+    <strong id="updateWeek">–</strong>
+    최신 주차
   </div>
 </header>
 
 <nav>
-  <button class="active" onclick="switchTab('today')">오늘의 순위</button>
-  <button onclick="switchTab('chart')">순위 변화 그래프</button>
-  <button onclick="switchTab('heatmap')">히트맵</button>
+  <button class="active" onclick="switchTab('today', this)">이번 주 순위</button>
+  <button onclick="switchTab('chart', this)">순위 변화 그래프</button>
+  <button onclick="switchTab('heatmap', this)">히트맵</button>
 </nav>
 
 <main>
 
-  <!-- ① 오늘의 순위 -->
+  <!-- ① 이번 주 순위 -->
   <div id="today" class="section active">
-    <div id="todayDate" class="date-badge">로딩 중...</div>
-    <div id="rankingGrid" class="ranking-grid">
+    <div id="weekBadge" class="week-badge" style="display:none">
+      <div class="dot"></div>
+      <span class="label">WEEK</span>
+      <span class="range" id="weekRange">–</span>
+    </div>
+    <div class="source-note">
+      📡 데이터 출처: <a href="https://www.netflix.com/tudum/top10/south-korea/tv" target="_blank">Netflix Tudum 공식</a>
+      · TV Top 10 (1~10위) + 영화 Top 10 (11~20위)  · 매주 화요일 업데이트
+    </div>
+    <div id="tvGrid" class="ranking-grid">
       <div class="state-box"><div class="spinner"></div><span>데이터 불러오는 중...</span></div>
     </div>
   </div>
@@ -368,17 +197,14 @@
   <!-- ② 순위 변화 그래프 -->
   <div id="chart" class="section">
     <div class="chart-controls">
-      <div>
-        <label>기간</label>
+      <div><label>기간</label>
         <select id="periodSelect" onchange="renderChart()">
-          <option value="7">최근 7일</option>
-          <option value="14">최근 14일</option>
-          <option value="30">최근 30일</option>
+          <option value="8">최근 8주</option>
+          <option value="16">최근 16주</option>
           <option value="0">전체</option>
         </select>
       </div>
-      <div>
-        <label>유형</label>
+      <div><label>유형</label>
         <select id="typeSelect" onchange="renderChart()">
           <option value="">전체</option>
           <option value="TV">TV 프로그램</option>
@@ -387,210 +213,189 @@
       </div>
       <input class="search-box" id="searchBox" placeholder="제목 검색..." oninput="renderChart()" />
     </div>
-    <div class="chart-wrap">
-      <canvas id="rankChart"></canvas>
-    </div>
+    <div class="chart-wrap"><canvas id="rankChart"></canvas></div>
     <div class="legend-custom" id="chartLegend"></div>
   </div>
 
   <!-- ③ 히트맵 -->
   <div id="heatmap" class="section">
     <div class="heatmap-wrap">
-      <div id="heatmapTable"><div class="empty-msg">데이터를 불러오는 중입니다...</div></div>
+      <div id="heatmapTable"><div class="state-box"><div class="spinner"></div><span>로딩 중...</span></div></div>
     </div>
   </div>
 
 </main>
 
 <script>
-// ──────────────────────────────────────────────
-//  CONFIG
-// ──────────────────────────────────────────────
-// GitHub Pages에서 history/ 폴더에 저장된 JSON 파일을 날짜 기준으로 로드
 const HISTORY_BASE = './history/';
-
-let allData   = {};  // { "2025-04-10": [{rank, title, type, ...}] }
+let allData = {};      // { "2026-W14": [{rank, title, type, week_range, ...}] }
 let chartInst = null;
 let hiddenSeries = new Set();
 
-// ──────────────────────────────────────────────
-//  INIT
-// ──────────────────────────────────────────────
+// ── INIT ──
 async function init() {
   try {
-    // index.json 에 저장된 날짜 목록을 읽어옴
     const res = await fetch(HISTORY_BASE + 'index.json?_=' + Date.now());
     if (!res.ok) throw new Error('index.json 없음');
-    const dates = await res.json();          // ["2025-04-10", "2025-04-11", ...]
+    const weeks = await res.json();   // ["2026-W13", "2026-W14", ...]
 
-    await Promise.all(dates.map(async d => {
-      const r = await fetch(`${HISTORY_BASE}${d}.json`);
-      if (r.ok) allData[d] = await r.json();
+    await Promise.all(weeks.map(async w => {
+      const r = await fetch(`${HISTORY_BASE}${w}.json`);
+      if (r.ok) allData[w] = await r.json();
     }));
 
     renderToday();
     renderChart();
     renderHeatmap();
-    updateLastUpdated();
+    updateHeader();
   } catch (e) {
-    // 데이터 없을 때 샘플 표시
-    console.warn('데이터 없음, 샘플 표시:', e);
-    showSampleData();
+    console.warn('데이터 없음:', e);
+    renderNoData();
   }
 }
 
-// ──────────────────────────────────────────────
-//  SAMPLE (데이터 없을 때 UI 미리보기)
-// ──────────────────────────────────────────────
-const SAMPLE_TITLES = [
-  '오징어 게임', '더 글로리', '기생충', '이상한 변호사 우영우', '스위트홈',
-  '킹덤', '지옥', '소년심판', '나의 아저씨', '무브 투 헤븐',
-  '사랑의 불시착', '이태원 클라쓰', '빈센조', '펜트하우스', '갯마을 차차차',
-  '지금 우리 학교는', '수리남', '종이의 집 코리아', '마스크걸', '경이로운 소문'
-];
-function makeSampleDay(date, shift=0) {
-  return SAMPLE_TITLES.map((title, i) => ({
-    rank: i+1,
-    title,
-    type: i % 3 === 0 ? 'Movie' : 'TV',
-    weeks: Math.floor(Math.random()*8)+1
-  })).sort(() => Math.random()-0.5).map((item,i) => ({...item, rank:i+1}));
-}
-function showSampleData() {
-  const today = new Date();
-  for (let i=6; i>=0; i--) {
-    const d = new Date(today); d.setDate(d.getDate()-i);
-    const key = d.toISOString().slice(0,10);
-    allData[key] = makeSampleDay(key, i);
-  }
-  renderToday();
-  renderChart();
-  renderHeatmap();
-  updateLastUpdated();
-  document.querySelector('.subtitle').textContent = 'Korea Top 20 · 샘플 데이터 (실제 데이터 없음)';
+// ── NO DATA ──
+function renderNoData() {
+  document.getElementById('tvGrid').innerHTML = `
+    <div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--muted);
+                border:1px dashed var(--border);border-radius:8px;">
+      아직 수집된 데이터가 없습니다.<br>
+      GitHub Actions가 실행되면 자동으로 표시됩니다.
+    </div>`;
 }
 
-// ──────────────────────────────────────────────
-//  TODAY
-// ──────────────────────────────────────────────
+// ── TODAY TAB ──
 function renderToday() {
-  const dates = Object.keys(allData).sort();
-  if (!dates.length) return;
-  const latest = dates[dates.length-1];
-  const prev   = dates.length > 1 ? dates[dates.length-2] : null;
-  const items  = allData[latest];
-  const prevMap = prev ? Object.fromEntries(allData[prev].map(x=>[x.title,x.rank])) : {};
+  const weeks = Object.keys(allData).sort();
+  if (!weeks.length) { renderNoData(); return; }
 
-  document.getElementById('todayDate').textContent =
-    latest + ' 기준 TOP 20';
+  const latestW = weeks[weeks.length - 1];
+  const prevW   = weeks.length > 1 ? weeks[weeks.length - 2] : null;
+  const items   = allData[latestW];
+  const prevMap = prevW
+    ? Object.fromEntries(allData[prevW].map(x => [x.title, x.rank]))
+    : {};
 
-  const grid = document.getElementById('rankingGrid');
-  grid.innerHTML = items.map((item, idx) => {
-    const oldRank = prevMap[item.title];
-    let changeHTML = '';
-    if (!oldRank) {
-      changeHTML = `<span class="rank-change new">NEW</span>`;
-    } else {
-      const diff = oldRank - item.rank;
-      if (diff > 0)      changeHTML = `<span class="rank-change up">▲${diff}</span>`;
-      else if (diff < 0) changeHTML = `<span class="rank-change down">▼${Math.abs(diff)}</span>`;
-      else               changeHTML = `<span class="rank-change same">―</span>`;
-    }
-    return `
-      <div class="rank-card" style="animation-delay:${idx*0.03}s">
-        <div class="rank-num ${item.rank<=3?'top3':''}">${item.rank}</div>
-        <div class="rank-info">
-          <div class="rank-title">${item.title}</div>
-          <div class="rank-type">${item.type || '–'} ${item.weeks ? '· '+item.weeks+'주' : ''}</div>
-        </div>
-        ${changeHTML}
-      </div>`;
-  }).join('');
+  // 주간 범위 배지
+  const weekRange = items[0]?.week_range || '';
+  document.getElementById('weekRange').textContent =
+    weekRange ? `${latestW}  (${weekRange})` : latestW;
+  document.getElementById('weekBadge').style.display = 'inline-flex';
+
+  // TV / Movie 분리
+  const tvItems    = items.filter(x => x.type === 'TV');
+  const movieItems = items.filter(x => x.type === 'Movie');
+
+  function buildCards(arr, cssClass) {
+    return arr.map((item, idx) => {
+      const oldRank = prevMap[item.title];
+      let changeHTML = '';
+      if (!oldRank) {
+        changeHTML = `<span class="rank-change new">NEW</span>`;
+      } else {
+        const diff = oldRank - item.rank;
+        if (diff > 0)      changeHTML = `<span class="rank-change up">▲${diff}</span>`;
+        else if (diff < 0) changeHTML = `<span class="rank-change down">▼${Math.abs(diff)}</span>`;
+        else               changeHTML = `<span class="rank-change same">―</span>`;
+      }
+      const typeLabel = item.type === 'TV' ? 'TV' : 'MOVIE';
+      const typeClass = item.type === 'TV' ? 'tv' : 'movie';
+      const secRank   = item.section_rank || item.rank;
+      return `
+        <div class="rank-card ${cssClass}" style="animation-delay:${idx*0.04}s">
+          <div class="rank-num ${item.rank<=3?'top3':''}">${item.rank}</div>
+          <div class="rank-info">
+            <div class="rank-title">${item.title}</div>
+            <div class="rank-meta">
+              <span class="type-badge ${typeClass}">${typeLabel}</span>
+              ${item.type}  #${secRank}위
+            </div>
+          </div>
+          ${changeHTML}
+        </div>`;
+    }).join('');
+  }
+
+  const grid = document.getElementById('tvGrid');
+  grid.innerHTML = `
+    <div class="section-title" style="grid-column:1/-1">
+      <span>▶</span> TV 프로그램 Top 10
+    </div>
+    ${buildCards(tvItems, 'tv-card')}
+    <div class="section-title" style="grid-column:1/-1; margin-top:12px">
+      <span>▶</span> 영화 Top 10
+    </div>
+    ${buildCards(movieItems, 'movie-card')}
+  `;
 }
 
-// ──────────────────────────────────────────────
-//  CHART
-// ──────────────────────────────────────────────
+// ── CHART TAB ──
 const PALETTE = [
-  '#E50914','#F5C518','#4CAF50','#2196F3','#FF9800',
-  '#9C27B0','#00BCD4','#FF5722','#607D8B','#E91E63',
-  '#8BC34A','#3F51B5','#FF6F00','#00897B','#C62828',
-  '#6A1B9A','#0277BD','#2E7D32','#AD1457','#558B2F'
+  '#E50914','#F5C518','#4CAF50','#2196F3','#FF9800','#9C27B0',
+  '#00BCD4','#FF5722','#607D8B','#E91E63','#8BC34A','#3F51B5',
+  '#FF6F00','#00897B','#C62828','#6A1B9A','#0277BD','#2E7D32',
+  '#AD1457','#558B2F'
 ];
 
-function getFilteredDates() {
-  const days = parseInt(document.getElementById('periodSelect').value);
-  let dates = Object.keys(allData).sort();
-  if (days > 0) dates = dates.slice(-days);
-  return dates;
+function getFilteredWeeks() {
+  const n = parseInt(document.getElementById('periodSelect').value);
+  let weeks = Object.keys(allData).sort();
+  if (n > 0) weeks = weeks.slice(-n);
+  return weeks;
 }
 
-function getFilteredTitles(dates) {
+function renderChart() {
+  const weeks  = getFilteredWeeks();
   const type   = document.getElementById('typeSelect').value;
   const search = document.getElementById('searchBox').value.trim().toLowerCase();
+
   const titleSet = new Set();
-  dates.forEach(d => allData[d].forEach(item => {
+  weeks.forEach(w => allData[w]?.forEach(item => {
     if (type && item.type !== type) return;
     if (search && !item.title.toLowerCase().includes(search)) return;
     titleSet.add(item.title);
   }));
-  // 최신 날짜 기준 순위순 정렬
-  const latest = dates[dates.length-1];
-  const latestMap = allData[latest] ? Object.fromEntries(allData[latest].map(x=>[x.title,x.rank])) : {};
-  return [...titleSet].sort((a,b) => (latestMap[a]||99) - (latestMap[b]||99));
-}
 
-function renderChart() {
-  const dates  = getFilteredDates();
-  const titles = getFilteredTitles(dates);
+  const latest  = weeks[weeks.length - 1];
+  const latestM = allData[latest] ? Object.fromEntries(allData[latest].map(x=>[x.title,x.rank])) : {};
+  const titles  = [...titleSet].sort((a,b) => (latestM[a]||99) - (latestM[b]||99));
 
   const datasets = titles.map((title, i) => {
     const color = PALETTE[i % PALETTE.length];
-    const data  = dates.map(d => {
-      const item = allData[d]?.find(x => x.title === title);
-      return item ? item.rank : null;
-    });
     return {
       label: title,
-      data,
-      borderColor: color,
-      backgroundColor: color + '22',
-      pointBackgroundColor: color,
-      borderWidth: 2,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      tension: 0.3,
-      spanGaps: true,
-      hidden: hiddenSeries.has(title)
+      data: weeks.map(w => allData[w]?.find(x=>x.title===title)?.rank ?? null),
+      borderColor: color, backgroundColor: color + '22',
+      pointBackgroundColor: color, borderWidth: 2,
+      pointRadius: 4, pointHoverRadius: 7,
+      tension: 0.3, spanGaps: true,
+      hidden: hiddenSeries.has(title),
     };
+  });
+
+  // X축 라벨: 주차 + 날짜범위
+  const labels = weeks.map(w => {
+    const items = allData[w];
+    const range = items?.[0]?.week_range || '';
+    return range ? `${w}\n(${range})` : w;
   });
 
   const ctx = document.getElementById('rankChart').getContext('2d');
   if (chartInst) chartInst.destroy();
   chartInst = new Chart(ctx, {
     type: 'line',
-    data: { labels: dates, datasets },
+    data: { labels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: window.innerWidth < 640 ? 1.3 : 2.2,
+      responsive: true, maintainAspectRatio: true,
+      aspectRatio: window.innerWidth < 640 ? 1.2 : 2,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}위`
-          }
-        }
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}위` } }
       },
       scales: {
         y: {
-          reverse: true,
-          min: 1, max: 20,
-          ticks: {
-            stepSize: 1,
-            color: '#888',
-            callback: v => v + '위'
-          },
+          reverse: true, min: 1, max: 20,
+          ticks: { stepSize: 1, color: '#888', callback: v => v + '위' },
           grid: { color: '#1f1f1f' }
         },
         x: {
@@ -602,13 +407,12 @@ function renderChart() {
     }
   });
 
-  // 커스텀 범례
   const legend = document.getElementById('chartLegend');
   legend.innerHTML = titles.map((title, i) => {
     const color = PALETTE[i % PALETTE.length];
-    const isHidden = hiddenSeries.has(title);
     return `
-      <div class="legend-item ${isHidden?'hidden-series':''}" onclick="toggleSeries('${title.replace(/'/g,"\\'")}')">
+      <div class="legend-item ${hiddenSeries.has(title)?'hidden-series':''}"
+           onclick="toggleSeries('${title.replace(/'/g,"\\'")}')">
         <div class="legend-dot" style="background:${color}"></div>
         <span>${title}</span>
       </div>`;
@@ -621,41 +425,34 @@ function toggleSeries(title) {
   renderChart();
 }
 
-// ──────────────────────────────────────────────
-//  HEATMAP
-// ──────────────────────────────────────────────
+// ── HEATMAP TAB ──
 function rankColor(rank) {
-  if (!rank) return 'background:#111;color:#444';
-  const t = (rank - 1) / 19; // 0=1위, 1=20위
-  const r = Math.round(229 * (1-t) + 30 * t);
-  const g = Math.round(9   * (1-t) + 30 * t);
-  const b = Math.round(20  * (1-t) + 30 * t);
-  const text = t < 0.5 ? '#fff' : '#aaa';
-  return `background:rgb(${r},${g},${b});color:${text}`;
+  if (!rank) return 'background:#111;color:#333';
+  const t = (rank-1)/19;
+  const r = Math.round(229*(1-t)+20*t);
+  const g = Math.round(9*(1-t)+20*t);
+  const b = Math.round(20*(1-t)+20*t);
+  return `background:rgb(${r},${g},${b});color:${t<0.5?'#fff':'#aaa'}`;
 }
 
 function renderHeatmap() {
-  const dates = Object.keys(allData).sort().slice(-14); // 최근 14일
+  const weeks = Object.keys(allData).sort().slice(-12);
   const titleSet = new Set();
-  dates.forEach(d => allData[d]?.forEach(x => titleSet.add(x.title)));
-  const titles = [...titleSet].sort((a,b) => {
-    const latest = dates[dates.length-1];
-    const ra = allData[latest]?.find(x=>x.title===a)?.rank || 99;
-    const rb = allData[latest]?.find(x=>x.title===b)?.rank || 99;
-    return ra - rb;
-  });
+  weeks.forEach(w => allData[w]?.forEach(x => titleSet.add(x.title)));
+  const latest = weeks[weeks.length-1];
+  const latestM = allData[latest] ? Object.fromEntries(allData[latest].map(x=>[x.title,x.rank])) : {};
+  const titles = [...titleSet].sort((a,b) => (latestM[a]||99)-(latestM[b]||99));
 
-  const shortDates = dates.map(d => d.slice(5));
-  let html = `<table class="heatmap">
-    <thead><tr>
-      <th class="title-col">제목</th>
-      ${shortDates.map(d=>`<th>${d}</th>`).join('')}
-    </tr></thead><tbody>`;
+  const shortWeeks = weeks.map(w => w.replace(/^\d{4}-/, ''));   // "W14"
+  let html = `<table class="heatmap"><thead><tr>
+    <th class="title-col">제목</th>
+    ${shortWeeks.map(w=>`<th>${w}</th>`).join('')}
+  </tr></thead><tbody>`;
 
   titles.forEach(title => {
     html += `<tr><td class="title-cell" title="${title}">${title}</td>`;
-    dates.forEach(d => {
-      const item = allData[d]?.find(x=>x.title===title);
+    weeks.forEach(w => {
+      const item = allData[w]?.find(x=>x.title===title);
       const rank = item?.rank;
       html += `<td style="${rankColor(rank)}">${rank||''}</td>`;
     });
@@ -665,26 +462,20 @@ function renderHeatmap() {
   document.getElementById('heatmapTable').innerHTML = html;
 }
 
-// ──────────────────────────────────────────────
-//  UTILS
-// ──────────────────────────────────────────────
-function switchTab(id) {
+// ── UTILS ──
+function switchTab(id, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  event.currentTarget.classList.add('active');
+  btn.classList.add('active');
 }
 
-function updateLastUpdated() {
-  const dates = Object.keys(allData).sort();
-  if (!dates.length) return;
-  const latest = dates[dates.length-1];
-  document.getElementById('updateDate').textContent = latest;
+function updateHeader() {
+  const weeks = Object.keys(allData).sort();
+  if (!weeks.length) return;
+  document.getElementById('updateWeek').textContent = weeks[weeks.length-1];
 }
 
-// ──────────────────────────────────────────────
-//  START
-// ──────────────────────────────────────────────
 init();
 </script>
 </body>
