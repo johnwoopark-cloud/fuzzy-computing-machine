@@ -1,0 +1,19 @@
+# .github/workflows/reset.yml (한 번 쓰고 삭제해도 됨)
+name: Reset History
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          rm -f history/*.json
+          echo "[]" > history/index.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add history/
+          git commit -m "🗑 샘플 데이터 초기화"
+          git push
