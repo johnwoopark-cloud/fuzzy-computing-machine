@@ -1,10 +1,18 @@
 # .github/workflows/main.yml
+# ──────────────────────────────────────────────────────────────
+#  Netflix Korea Top 20 Weekly Tracker  (공식 Tudum 기준)
+#  매주 화요일 KST 08:50 자동 실행 (Netflix 업데이트 주기 반영)
+#  + workflow_dispatch 로 언제든 수동 실행 가능
+# ──────────────────────────────────────────────────────────────
 
-name: Netflix Korea Daily Ranking
+name: Netflix Korea Weekly Ranking
 
 on:
+  # Netflix Tudum은 매주 화요일 업데이트 → KST 화 08:50 = UTC 월 23:50
   schedule:
-    - cron: '50 23 * * *'   # KST 08:50 = UTC 23:50 (전날)
+    - cron: '50 23 * * 1'   # UTC 월요일 23:50 = KST 화요일 08:50
+
+  # 수동 실행 (Actions 탭 → Run workflow)
   workflow_dispatch:
 
 permissions:
@@ -18,8 +26,11 @@ concurrency:
 
 jobs:
 
+  # ────────────────────────────────────────
+  #  JOB 1: 순위 수집 및 저장
+  # ────────────────────────────────────────
   scrape:
-    name: 📊 Netflix 순위 수집
+    name: 📊 Netflix 순위 수집 (Tudum 공식)
     runs-on: ubuntu-latest
 
     steps:
@@ -33,15 +44,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 의존성 설치
+      - name: Python 의존성 설치
         run: |
           pip install --upgrade pip
-          pip install requests beautifulsoup4 lxml
+          pip install requests beautifulsoup4 lxml playwright
 
-      - name: Netflix 순위 수집 실행
+      # Playwright 헤드리스 브라우저 (Chromium) 설치
+      - name: Playwright Chromium 설치
+        run: playwright install chromium --with-deps
+
+      - name: Netflix Tudum 순위 수집
         env:
           TZ: Asia/Seoul
-          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
         run: |
           echo "실행 시각 (KST): $(TZ=Asia/Seoul date)"
           python netflix.py
@@ -57,11 +71,14 @@ jobs:
             echo "변경사항 없음, 커밋 생략"
           else
             DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')
-            git commit -m "📊 Netflix 한국 순위 업데이트 - ${DATE_KST}"
+            git commit -m "📊 Netflix 한국 순위 업데이트 (Tudum 공식) - ${DATE_KST}"
             git push
             echo "커밋 & 푸시 완료"
           fi
 
+  # ────────────────────────────────────────
+  #  JOB 2: GitHub Pages 배포
+  # ────────────────────────────────────────
   deploy:
     name: 🚀 GitHub Pages 배포
     needs: scrape
