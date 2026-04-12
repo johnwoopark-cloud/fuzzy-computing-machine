@@ -1,0 +1,142 @@
+[
+  {
+    "rank": 1,
+    "local_rank": 1,
+    "title": "수리남",
+    "type": "TV",
+    "weeks": 6
+  },
+  {
+    "rank": 2,
+    "local_rank": 2,
+    "title": "지금 우리 학교는",
+    "type": "TV",
+    "weeks": 8
+  },
+  {
+    "rank": 3,
+    "local_rank": 3,
+    "title": "오징어 게임 시즌2",
+    "type": "TV",
+    "weeks": 3
+  },
+  {
+    "rank": 4,
+    "local_rank": 4,
+    "title": "스위트홈 시즌3",
+    "type": "TV",
+    "weeks": 8
+  },
+  {
+    "rank": 5,
+    "local_rank": 5,
+    "title": "나의 아저씨",
+    "type": "TV",
+    "weeks": 1
+  },
+  {
+    "rank": 6,
+    "local_rank": 6,
+    "title": "이상한 변호사 우영우",
+    "type": "TV",
+    "weeks": 4
+  },
+  {
+    "rank": 7,
+    "local_rank": 7,
+    "title": "무브 투 헤븐",
+    "type": "TV",
+    "weeks": 2
+  },
+  {
+    "rank": 8,
+    "local_rank": 8,
+    "title": "마스크걸",
+    "type": "TV",
+    "weeks": 7
+  },
+  {
+    "rank": 9,
+    "local_rank": 9,
+    "title": "사랑의 불시착",
+    "type": "TV",
+    "weeks": 3
+  },
+  {
+    "rank": 10,
+    "local_rank": 10,
+    "title": "빈센조",
+    "type": "TV",
+    "weeks": 8
+  },
+  {
+    "rank": 11,
+    "local_rank": 11,
+    "title": "펜트하우스",
+    "type": "TV",
+    "weeks": 1
+  },
+  {
+    "rank": 12,
+    "local_rank": 12,
+    "title": "이태원 클라쓰",
+    "type": "TV",
+    "weeks": 1
+  },
+  {
+    "rank": 13,
+    "local_rank": 13,
+    "title": "더 글로리",
+    "type": "TV",
+    "weeks": 4
+  },
+  {
+    "rank": 14,
+    "local_rank": 14,
+    "title": "종이의 집 코리아",
+    "type": "TV",
+    "weeks": 7
+  },
+  {
+    "rank": 15,
+    "local_rank": 15,
+    "title": "경이로운 소문",
+    "type": "TV",
+    "weeks": 4
+  },
+  {
+    "rank": 16,
+    "local_rank": 16,
+    "title": "기생충",
+    "type": "Movie",
+    "weeks": 2
+  },
+  {
+    "rank": 17,
+    "local_rank": 17,
+    "title": "소년심판",
+    "type": "TV",
+    "weeks": 3
+  },
+  {
+    "rank": 18,
+    "local_rank": 18,
+    "title": "지옥 시즌2",
+    "type": "TV",
+    "weeks": 2
+  },
+  {
+    "rank": 19,
+    "local_rank": 19,
+    "title": "갯마을 차차차",
+    "type": "TV",
+    "weeks": 1
+  },
+  {
+    "rank": 20,
+    "local_rank": 20,
+    "title": "킹덤",
+    "type": "TV",
+    "weeks": 1
+  }
+]
