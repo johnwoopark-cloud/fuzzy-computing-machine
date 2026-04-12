@@ -1,0 +1,128 @@
+# .github/workflows/main.yml
+# ──────────────────────────────────────────────────────────────
+#  Netflix Korea Top 20 Daily Tracker
+#  매일 KST 08:50 (UTC 23:50 전날) 자동 실행
+#  1. netflix.py 로 순위 스크래핑
+#  2. history/ 폴더에 JSON 저장 후 커밋·푸시
+#  3. GitHub Pages 배포 (index.html + history/)
+# ──────────────────────────────────────────────────────────────
+
+name: Netflix Korea Daily Ranking
+
+on:
+  # ── 매일 KST 08:50 = UTC 23:50 (전날) ──
+  schedule:
+    - cron: '50 23 * * *'
+
+  # ── 수동 실행 (Actions 탭에서 "Run workflow") ──
+  workflow_dispatch:
+
+# GitHub Pages 배포에 필요한 권한
+permissions:
+  contents: write          # 파일 커밋·푸시
+  pages: write             # Pages 배포
+  id-token: write          # OIDC 토큰 (Pages)
+
+# 동시 실행 방지 (이전 배포 완료 후 실행)
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+
+  # ────────────────────────────────────────
+  #  JOB 1: 순위 수집 및 저장
+  # ────────────────────────────────────────
+  scrape:
+    name: 📊 Netflix 순위 수집
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) 저장소 체크아웃 (history/ 폴더 포함)
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 전체 히스토리 (커밋용)
+
+      # 2) Python 환경 설정
+      - name: Python 3.11 설정
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # 3) 의존성 설치
+      - name: 의존성 설치
+        run: |
+          pip install --upgrade pip
+          pip install requests beautifulsoup4 lxml
+
+      # 4) 스크래핑 실행 (KST 시간 표시용 TZ 설정)
+      - name: Netflix 순위 수집 실행
+        env:
+          TZ: Asia/Seoul
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}   # (선택) SerpAPI 키
+        run: |
+          echo "실행 시각 (KST): $(TZ=Asia/Seoul date)"
+          python netflix.py
+
+      # 5) history/ 폴더 변경사항 커밋 & 푸시
+      - name: 데이터 커밋 및 푸시
+        env:
+          TZ: Asia/Seoul
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add history/
+
+          # 변경사항이 있을 때만 커밋
+          if git diff --cached --quiet; then
+            echo "변경사항 없음, 커밋 생략"
+          else
+            DATE_KST=$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')
+            git commit -m "📊 Netflix 한국 순위 업데이트 - ${DATE_KST}"
+            git push
+            echo "커밋 & 푸시 완료"
+          fi
+
+  # ────────────────────────────────────────
+  #  JOB 2: GitHub Pages 배포
+  # ────────────────────────────────────────
+  deploy:
+    name: 🚀 GitHub Pages 배포
+    needs: scrape                # scrape 완료 후 실행
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # 1) 최신 코드 체크아웃 (scrape에서 커밋한 내용 포함)
+      - name: 저장소 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main              # main 브랜치 최신 커밋
+
+      # 2) Pages 설정
+      - name: GitHub Pages 설정
+        uses: actions/configure-pages@v5
+
+      # 3) 배포할 파일 업로드
+      #    루트의 index.html + history/ 폴더 전체를 Pages에 올림
+      - name: 아티팩트 업로드
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'              # 저장소 루트 전체 (index.html + history/)
+
+      # 4) 배포 실행
+      - name: GitHub Pages 배포
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # 5) 배포 URL 출력
+      - name: 배포 완료 알림
+        run: |
+          echo "✅ 배포 완료!"
+          echo "🌐 페이지 URL: ${{ steps.deployment.outputs.page_url }}"
